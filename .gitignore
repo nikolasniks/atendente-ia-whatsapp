@@ -1,0 +1,21 @@
+# Ambiente Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Segredos e configurações locais (nunca enviar)
+.env
+.env.*
+*.pem
+*.key
+
+# Build e deploy
+dist/
+build/
+cdk.out/
+*.zip
+
+# Sistema
+.DS_Store
+Thumbs.db

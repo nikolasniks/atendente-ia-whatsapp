@@ -1,0 +1,27 @@
+[project]
+name = "atendente-ia-whatsapp"
+version = "0.1.0"
+description = "Atendente virtual de WhatsApp com Claude (Amazon Bedrock) integrado a um ERP"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.13"
+dependencies = [
+    "anthropic[bedrock]>=2.1.0",
+    "boto3>=1.43.117",
+    "httpx>=0.28.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "atendente_ia"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["tests"]
