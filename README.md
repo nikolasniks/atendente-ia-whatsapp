@@ -1,16 +1,15 @@
-# Atendente IA para WhatsApp
+# WhatsApp AI Customer Service Agent
 
-Atendente virtual que conversa com clientes pelo WhatsApp, consulta o ERP da empresa
-e resolve o dia a dia do atendimento: status de pedido, preços, orçamentos e contas em aberto.
-Roda na **AWS** e usa o **Claude Sonnet 5** (Amazon Bedrock) como cérebro.
+AI agent that serves customers over WhatsApp and connects to the company's ERP to handle
+day-to-day requests: order status, product pricing, order placement and open invoices.
+Built on **AWS** (Amazon Bedrock, Lambda, DynamoDB).
 
-> **Projeto vitrine.** A empresa "Marcenaria Exemplo" e todos os clientes, produtos,
-> pedidos e valores deste repositório são **fictícios**. A versão em produção roda em
-> um repositório privado, ligada ao ERP real.
+Customer identity is resolved from the phone number and enforced in code, so the agent
+can never access another customer's data.
 
-*English: WhatsApp customer-service agent built on Claude Sonnet 5 (Amazon Bedrock)
-with tool use over an ERP. Customer identity is resolved from the phone number and
-enforced in code, so the model can never read another customer's data.*
+> **Showcase project.** "Marcenaria Exemplo" and all customers, products, orders and
+> amounts in this repository are **fictitious**. The production version runs in a private
+> repository connected to the real ERP.
 
 ---
 
