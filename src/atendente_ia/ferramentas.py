@@ -40,6 +40,29 @@ def identificar_cliente(erp: Erp, numero_whatsapp: str) -> dict | None:
     return None
 
 
+def _faixas(produto: dict) -> list[dict]:
+    """Faixas de preço por quantidade do grupo de preço padrão, em ordem crescente."""
+    grupos = produto.get("gruposPrecosVenda") or []
+    padrao = next((g for g in grupos if not g.get("idPriceGroup")), grupos[0] if grupos else {})
+    return sorted(padrao.get("precosVenda") or [], key=lambda f: f.get("de") or 0)
+
+
+def preco_tabela(produto: dict, quantidade: float = 1) -> float | None:
+    """Preço unitário de tabela para a quantidade pedida.
+
+    Em alguns ERPs o campo `preco` vem zerado: o valor real fica nas faixas
+    de `gruposPrecosVenda` (grupo padrão), cada uma valendo "a partir de" N unidades.
+    """
+    faixas = _faixas(produto)
+    valor = None
+    for faixa in faixas:
+        if (faixa.get("de") or 0) <= quantidade:
+            valor = faixa.get("valor")
+    if valor is None and faixas:
+        valor = faixas[0].get("valor")
+    return valor or produto.get("preco") or None
+
+
 def _ferramenta(nome: str, descricao: str, propriedades: dict, obrigatorias: list[str]) -> dict:
     return {
         "name": nome,
@@ -153,11 +176,23 @@ class Atendimento:
                     "codigo": p.get("codigo"),
                     "nome": p.get("nome"),
                     "unidade": p.get("unidade"),
-                    "preco_tabela": p.get("preco"),
+                    "preco_tabela": preco_tabela(p),
+                    "precos_por_quantidade": [
+                        {"a_partir_de": f.get("de"), "valor": f.get("valor")} for f in _faixas(p)
+                    ],
                 }
                 for p in encontrados
             ]
         }
+
+    def _produto_com_precos(self, produto_id: str) -> dict:
+        """A consulta por id não traz a tabela de preços; só a listagem/busca traz."""
+        produto = self.erp.consultar("produtos", produto_id)
+        termo = produto.get("codigo") or produto.get("nome") or ""
+        for p in self.erp.listar("produtos", {"search": termo}):
+            if p.get("id") == produto_id:
+                return p
+        raise ValueError(f"Produto {produto.get('nome') or produto_id} não encontrado no catálogo.")
 
     def _consultar_pedidos(self, somente_em_andamento: bool) -> dict:
         meus = [p for p in self.erp.listar("pedidos") if p.get("clienteId") == self.cliente["id"]]
@@ -191,10 +226,16 @@ class Atendimento:
             raise ValueError("O orçamento precisa de pelo menos um item.")
         linhas = []
         for item in itens:
-            if item["quantidade"] <= 0:
+            quantidade = item["quantidade"]
+            if quantidade <= 0:
                 raise ValueError("Quantidade deve ser maior que zero.")
-            produto = self.erp.consultar("produtos", item["produto_id"])
-            linhas.append((produto, item["quantidade"]))
+            produto = self._produto_com_precos(item["produto_id"])
+            preco = preco_tabela(produto, quantidade)
+            if not preco:
+                raise ValueError(
+                    f"{produto.get('nome')} está sem preço de tabela. Chame um atendente para orçar."
+                )
+            linhas.append((produto, quantidade, preco))
 
         orcamento = self.erp.cadastrar(
             "orcamentos",
@@ -205,9 +246,8 @@ class Atendimento:
             },
         )
         total = 0.0
-        for produto, quantidade in linhas:
+        for produto, quantidade, preco in linhas:
             # Preço sempre o de tabela; acréscimos e descontos ficam com o vendedor.
-            preco = produto.get("preco") or 0.0
             self.erp.cadastrar(
                 "itens_orcamento",
                 {"produtoId": produto["id"], "quantidade": quantidade, "valorUnit": preco},

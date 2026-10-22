@@ -62,6 +62,29 @@ def test_orcamento_usa_preco_de_tabela_e_cliente_da_conversa():
     assert [i[1]["valorUnit"] for i in itens] == [12.5, 25.0]
 
 
+def test_busca_mostra_preco_da_tabela_e_nao_o_campo_zerado():
+    atendimento, _ = _atendimento()
+    resultado, _ = _rodar(atendimento, "buscar_produtos", {"termo": "caixa"})
+    produto = resultado["produtos"][0]
+    assert produto["preco_tabela"] == 12.5
+    assert produto["precos_por_quantidade"] == [{"a_partir_de": 1, "valor": 12.5}, {"a_partir_de": 50, "valor": 10.0}]
+
+
+def test_orcamento_aplica_faixa_de_quantidade():
+    atendimento, erp = _atendimento()
+    resultado, erro = _rodar(atendimento, "criar_orcamento", {"itens": [{"produto_id": "p1", "quantidade": 60}], "observacoes": ""})
+    assert not erro
+    assert resultado["total_estimado"] == 600.0
+    assert erp.cadastros[1][1]["valorUnit"] == 10.0
+
+
+def test_orcamento_recusa_produto_sem_preco_sem_gravar_nada():
+    atendimento, erp = _atendimento()
+    resultado, erro = _rodar(atendimento, "criar_orcamento", {"itens": [{"produto_id": "p4", "quantidade": 1}], "observacoes": ""})
+    assert erro and "sem preço" in resultado["erro"]
+    assert erp.cadastros == []
+
+
 def test_orcamento_rejeita_quantidade_invalida():
     atendimento, erp = _atendimento()
     resultado, erro = _rodar(atendimento, "criar_orcamento", {"itens": [{"produto_id": "p1", "quantidade": 0}], "observacoes": ""})
